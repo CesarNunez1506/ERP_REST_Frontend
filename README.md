@@ -55,7 +55,8 @@ refetch y sale el error.
 | Ruta | Qué hace | Entidades |
 |---|---|---|
 | `/` | KPIs del día: ventas, ocupación, cola de cocina, SLA promedio, top de carta | agregado |
-| `/mesas` | Plano del salón. Mesa libre → abre orden; ocupada → va a su detalle | `TABLE` |
+| `/mesas` | Plano del local en vivo. Mesa libre → abre orden; ocupada → va a su detalle | `TABLE` |
+| `/mesas/croquis` | Editor del croquis: dibuja paredes, ubica mesas, coloca sillas | `draw_croquislocal` |
 | `/ordenes` | Listado filtrable de comandas | `ORDER` |
 | `/ordenes/:id` | Comanda: agregar platos, enviar a cocina, emitir y cobrar el ticket | `ORDER`, `PLATE`, `ORDER_TICKET` |
 | `/cocina` | KDS por estación en 3 columnas, con cronómetro y semáforo de SLA | `PLATE`, `STATION` |
@@ -63,6 +64,35 @@ refetch y sale el error.
 | `/carta` | ABM de carta, stock y disponibilidad | `MENU` |
 | `/estaciones` | ABM de estaciones, responsable y carga actual | `STATION`, `WORKER` |
 | `/personal` | ABM de trabajadores por rol y turno | `WORKER` |
+
+## Croquis del local
+
+El salón tiene dos vistas: **Plano** (el croquis real del local) y **Cuadrícula** (las
+mesas como tarjetas, útil cuando todavía no hay croquis o desde el celular). El plano
+pinta cada mesa con su estado en vivo y al tocarla hace lo mismo que la tarjeta: abre
+orden si está libre, o va al detalle si está ocupada.
+
+El croquis se dibuja en `/mesas/croquis` y se guarda entero en la columna
+`draw_croquislocal`. El editor tiene cinco herramientas:
+
+| Tecla | Herramienta | |
+|---|---|---|
+| `V` | Seleccionar | Arrastra para mover. `Supr` borra, las flechas mueven de a un cuadro (con `Shift`, de a uno) |
+| `P` | Pared | Un clic por esquina; `Enter` termina, `Esc` cancela, `Shift` fuerza recta |
+| `M` | Mesa | Elige qué `TABLE` es y haz clic donde va; opcionalmente coloca sus sillas |
+| `S` | Silla | Sillas sueltas (barra, espera) |
+| `B` | Borrar | Clic sobre lo que sobra |
+
+`Ctrl+Z` / `Ctrl+Shift+Z` deshacen y rehacen. Al salir con cambios sin guardar avisa.
+
+Detalles que importan:
+
+- Las sillas de una mesa se **reparten según `TABLE.capacity_persons`** y miran hacia
+  ella. Se mueven y se borran junto con su mesa.
+- Cada mesa dibujada apunta a un `TABLE.id` real. Si hay mesas registradas que aún no
+  están en el plano, el salón lo avisa y lleva al editor.
+- El croquis guarda **dónde** está cada mesa; el estado sigue viniendo de `GET /tables`.
+  Mover una mesa de sitio no toca las órdenes.
 
 ## Flujo operativo
 
@@ -104,11 +134,14 @@ src/
     Layout.jsx       barra lateral, estado de conexión, shell responsivo
     ui.jsx           Button, Card, Modal, Table, Badge, Toast…
     Icon.jsx         set de íconos SVG
+    croquis/
+      CroquisLienzo.jsx  dibujo del plano (lo usan la vista y el editor)
   hooks/
     useApi.js        useFetch, useAction, useNow
     useRealtime.js   useRealtime, useSalas, useRefetchEnEventos, useConexion
   lib/
     constants.js     enums del DER + etiquetas y tonos
     format.js        soles, IGV, cronómetro, semáforo de SLA
+    croquis.js       formato de draw_croquislocal y geometría (grilla, sillas)
   pages/             una por ruta
 ```

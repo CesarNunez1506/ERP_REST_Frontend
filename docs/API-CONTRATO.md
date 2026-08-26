@@ -207,6 +207,77 @@ libera la mesa. → `409` si ya estaba pagado.
 }
 ```
 
+### Croquis del local — `/api/croquis-local`
+
+El plano del local se guarda entero en la columna **`draw_croquislocal`**. No es una
+colección: es un documento único, por eso no lleva `:id`.
+
+```
+GET /croquis-local
+PUT /croquis-local  { drawCroquisLocal: { ... } }
+```
+
+Respuesta (ambos verbos):
+
+```json
+{
+  "id": 1,
+  "name": "Sabor & Fuego — Local Miraflores",
+  "updatedAt": "2026-08-26T08:12:00.000Z",
+  "drawCroquisLocal": { "...": "el documento completo, ver abajo" }
+}
+```
+
+El backend **no interpreta el dibujo**: lo guarda tal cual (`jsonb` o `text`). Basta con
+dos validaciones:
+
+- `400` si `drawCroquisLocal` no es un objeto.
+- `409` si alguna `tables[].tableId` no corresponde a un `TABLE` existente — así el
+  plano nunca queda apuntando a mesas borradas.
+
+Si la columna es `TEXT` en vez de `JSONB` y devuelve el JSON como string, el front
+igual lo entiende (`normalizarCroquis` lo parsea).
+
+#### Formato de `draw_croquislocal`
+
+Coordenadas en unidades del lienzo, no en píxeles: el SVG escala solo. El origen es
+la esquina superior izquierda.
+
+```json
+{
+  "version": 1,
+  "width": 1200,
+  "height": 800,
+  "grid": 20,
+  "walls": [
+    { "id": "pared_x1", "points": [[40,40],[1160,40]], "thickness": 10 }
+  ],
+  "tables": [
+    { "id": "mesa_x2", "tableId": 3, "x": 640, "y": 160,
+      "shape": "rect", "width": 100, "height": 80, "rotation": 0 }
+  ],
+  "chairs": [
+    { "id": "silla_x3", "mesaId": "mesa_x2", "x": 640, "y": 90, "rotation": 0 }
+  ]
+}
+```
+
+| Campo | Detalle |
+|---|---|
+| `walls[].points` | Polilínea: 2 puntos es una pared recta, más puntos son esquinas |
+| `tables[].tableId` | **La única clave foránea del documento** — enlaza el dibujo con `TABLE.id`. En `null` el dibujo existe pero no representa ninguna mesa real |
+| `tables[].shape` | `rect` o `round` (en `round`, `width` es el diámetro) |
+| `chairs[].mesaId` | Apunta al `id` del elemento mesa **dentro del croquis**, no a `TABLE.id`. Sirve para que la silla se mueva y se borre junto con su mesa. En `null` es una silla suelta |
+| `rotation` | Grados, horario. En una silla, `0` = mira hacia abajo (+y); `90` izquierda, `180` arriba, `270` derecha |
+
+Los `id` de los elementos los genera el frontend (`mesa_…`, `silla_…`, `pared_…`) y solo
+tienen que ser únicos dentro del documento.
+
+**Importante:** el croquis guarda *dónde* está cada mesa; el estado (`LIBRE`/`OCUPADA`/
+`POR_COBRAR`) sigue saliendo de `GET /tables` y de `table.updated`. Son dos cosas
+separadas a propósito: mover una mesa de sitio no toca las órdenes, y una orden nueva no
+reescribe el plano.
+
 ### Panel — `/api/dashboard/resumen`
 
 Un solo endpoint agregado para no hacer 6 llamadas desde el panel:
@@ -279,6 +350,7 @@ Cada pantalla se suscribe solo a lo suyo:
 | `ticket.updated` | `ORDER_TICKET` expandido | `caja`, `salon`, `orden:<id>` |
 | `menu.updated` | `MENU` | broadcast |
 | `station.updated` | `STATION` con `platesInQueue` | `cocina` |
+| `croquis.updated` | el local completo, con `drawCroquisLocal` | `salon` |
 
 **Regla clave:** el payload es **el mismo objeto expandido que devuelve el REST**,
 no un `{ id }` suelto. Así el KDS aplica el cambio sin volver a pedir nada. Donde
@@ -292,6 +364,8 @@ Qué emitir en cada operación del service:
 - `POST /orders/:id/send` → un `plate.created` por plato + `menu.updated` por cada
   stock descontado + `order.sent` + `table.updated`
 - `POST /order-tickets` y `PATCH /order-tickets/:id` → `ticket.*` + `order.updated` + `table.updated`
+- `PUT /croquis-local` → `croquis.updated` (para que el plano del salón se reacomode
+  en las demás pantallas sin recargar)
 
 `table.updated` acompaña a casi todo porque `TABLE.status` es calculado: cambia
 sin que nadie toque la tabla `TABLE`.
