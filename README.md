@@ -1,4 +1,4 @@
-# Sabor & Fuego — Frontend del ERP de restaurante
+Frontend del ERP de restaurante
 
 Frontend React del ERP construido sobre el diagrama entidad-relación del proyecto
 (`WORKER`, `TABLE`, `ORDER`, `PLATE`, `MENU`, `STATION`, `ORDER_TICKET`).
