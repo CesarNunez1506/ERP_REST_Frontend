@@ -1,0 +1,63 @@
+@import 'tailwindcss';
+
+@theme {
+  --font-sans: 'Inter', ui-sans-serif, system-ui, sans-serif;
+
+  /* Paleta del ERP: carbón + ámbar (cocina) */
+  --color-carbon-50: #f6f6f5;
+  --color-carbon-100: #e7e7e5;
+  --color-carbon-200: #d1d1cd;
+  --color-carbon-300: #b0b0aa;
+  --color-carbon-400: #88887f;
+  --color-carbon-500: #6d6d64;
+  --color-carbon-600: #575751;
+  --color-carbon-700: #474743;
+  --color-carbon-800: #2b2b28;
+  --color-carbon-900: #1c1c1a;
+  --color-carbon-950: #131312;
+
+  --color-brasa-50: #fff8ed;
+  --color-brasa-100: #ffefd4;
+  --color-brasa-200: #ffdaa8;
+  --color-brasa-300: #ffbf70;
+  --color-brasa-400: #ff9937;
+  --color-brasa-500: #fe7c11;
+  --color-brasa-600: #ef6007;
+  --color-brasa-700: #c64708;
+  --color-brasa-800: #9d380f;
+  --color-brasa-900: #7e3010;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  font-family: var(--font-sans);
+  background: var(--color-carbon-50);
+  color: var(--color-carbon-900);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Scrollbars discretas para las columnas del KDS */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-carbon-300) transparent;
+}
+
+@keyframes pulso-sla {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.45;
+  }
+}
+
+.animate-pulso-sla {
+  animation: pulso-sla 1.4s ease-in-out infinite;
+}
